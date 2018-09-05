@@ -259,12 +259,11 @@ void Node::FinalizeScoreUpdate(float v,
 }
 
 float Node::local_tan(float value) {
-  float m_pi_2 = 1.5707963267948966f;
+  const float m_pi_2 = 1.5707963267948966f;
   // clip value constrains tan(score) near +/- inf
-  float clip_value = 100.0f;
-  float return_value;
+  const float clip_value = 100.0f;
+  float return_value = tan(m_pi_2 * value);
 
-  return_value = tan(m_pi_2 * value);
   return_value = std::max(-clip_value, return_value);
   return_value = std::min(clip_value, return_value);
 
@@ -317,7 +316,7 @@ void Node::FinalizeScoreUpdateMinimaxComponent(float v,
     // Get the sum tan(score) of all child nodes
     float w_ave_q = 0.0f;
     for (uint32_t i = 0; i < count; ++i) {
-      w_ave_q += local_tan(qs[i]) * ns[i];
+      w_ave_q -= local_tan(qs[i]) * ns[i];
     }
     w_ave_q /= best_nodes_n_sum;
 
@@ -326,8 +325,8 @@ void Node::FinalizeScoreUpdateMinimaxComponent(float v,
     minmax_w *= max_weight;
 
     // Finally update "q_"
-    float m_pi_2 = 1.5707963267948966f;
-    q_ = minmax_w * atan(-w_ave_q) / m_pi_2 + mcts_q_ * (1.0f - minmax_w);
+    const float m_pi_2 = 1.5707963267948966f;
+    q_ = minmax_w * atan(w_ave_q) / m_pi_2 + mcts_q_ * (1.0f - minmax_w);
   }
 }
 
