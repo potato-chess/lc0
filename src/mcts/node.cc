@@ -28,6 +28,7 @@
 #include "mcts/node.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstring>
@@ -217,11 +218,11 @@ std::string Node::DebugString() const {
 void Node::MakeTerminal(GameResult result) {
   is_terminal_ = true;
   if (result == GameResult::DRAW) {
-    q_ = 0.0f;
+    q_ = mcts_q_ = 0.0f;
   } else if (result == GameResult::WHITE_WON) {
-    q_ = 1.0f;
+    q_ = mcts_q_ = 1.0f;
   } else if (result == GameResult::BLACK_WON) {
-    q_ = -1.0f;
+    q_ = mcts_q_ = -1.0f;
   }
 }
 
@@ -233,9 +234,20 @@ bool Node::TryStartScoreUpdate() {
 
 void Node::CancelScoreUpdate() { --n_in_flight_; }
 
-void Node::FinalizeScoreUpdate(float v) {
+void Node::FinalizeScoreUpdate(float v,
+                               bool experimental_q_enabled,
+                               uint32_t experimental_q_required_n,
+                               float experimental_q_weight) {
   // Recompute Q.
-  q_ += (v - q_) / (n_ + 1);
+  mcts_q_ += (v - mcts_q_) / (n_ + 1);
+  if (experimental_q_enabled) {
+    FinalizeScoreUpdateMinimaxComponent(v,
+                                        experimental_q_required_n,
+                                        experimental_q_weight);
+  } else {
+    // If no alternative algorithm is used, "q_" is just "mcts_q_"
+    q_ = mcts_q_;
+  }
   // If first visit, update parent's sum of policies visited at least once.
   if (n_ == 0 && parent_ != nullptr) {
     parent_->visited_policy_ += parent_->edges_[index_].GetP();
@@ -244,6 +256,64 @@ void Node::FinalizeScoreUpdate(float v) {
   ++n_;
   // Decrement virtual loss.
   --n_in_flight_;
+}
+
+void Node::FinalizeScoreUpdateMinimaxComponent(float v,
+                                               uint32_t required_n,
+                                               float max_weight) {
+  // Recompute MinMax Q.
+  if (n_ == 0 || is_terminal_) {
+    q_ = v;
+  } else {
+    // Find the child node with highest N
+    auto child_nodes = ChildNodes();
+    auto highest_n_child = std::max_element(child_nodes.begin(), child_nodes.end(), [] (Node *lhs, Node *rhs) {
+      return lhs->n_ < rhs->n_ || (lhs->n_ == rhs->n_ && lhs->q_ < rhs->q_);
+    });
+
+    // Backup all the Q and N values of the childs nodes that have better or
+    // equal Q value than the node with the highest N
+    constexpr uint32_t max_array_size = 16;
+    std::array<float, max_array_size> qs;
+    std::array<uint32_t, max_array_size> ns;
+    uint32_t count = 0;
+    for (auto child : child_nodes) {
+      if (child == *highest_n_child || child->q_ >= highest_n_child->q_) {
+        qs[count] = child->q_;
+        ns[count] = child->n_;
+        ++count;
+        if (count == max_array_size) {
+          break;
+        }
+      }
+    }
+
+    // Get the sum N of all child nodes
+    uint32_t best_nodes_n_sum = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+      best_nodes_n_sum += ns[i];
+    }
+
+    // Don't know why, but sometimes "best_nodes_n_sum" is 0
+    // use "mcts_q_" if that happens to prevent crash.
+    if (best_nodes_n_sum == 0) {
+      q_ = mcts_q_;
+      return;
+    }
+    
+    // Calculate "bests_q"
+    float bests_q = 0.0f;
+    for (uint32_t i = 0; i < count; ++i) {
+      bests_q -= qs[i] * ((float)ns[i] / (float)best_nodes_n_sum);
+    }
+
+    // Calculate the "minmax_w"
+    float minmax_w = (float)std::min(n_, required_n) / (float)required_n;
+    minmax_w *= max_weight;
+
+    // Finally update "q_"
+    q_ = bests_q * minmax_w + mcts_q_ * (1.0f - minmax_w);
+  }
 }
 
 Node::NodeRange Node::ChildNodes() const { return child_.get(); }

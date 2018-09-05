@@ -172,7 +172,16 @@ class Node {
   // * Q (weighted average of all V in a subtree)
   // * N (+=1)
   // * N-in-flight (-=1)
-  void FinalizeScoreUpdate(float v);
+  void FinalizeScoreUpdate(float v,
+                           bool experimental_q_enabled,
+                           uint32_t experimental_q_required_n,
+                           float experimental_q_weight
+                           );
+
+  // Updates the node Q value using an algorithm based on subtree max Q*N value
+  void FinalizeScoreUpdateMinimaxComponent(float v,
+                                           uint32_t required_n,
+                                           float max_weight);
 
   // Updates max depth, if new depth is larger.
   void UpdateMaxDepth(int depth);
@@ -214,6 +223,9 @@ class Node {
   // subtree. For terminal nodes, eval is stored. This is from the perspective
   // of the player who "just" moved to reach this position, rather than from the
   // perspective of the player-to-move for the position.
+  float mcts_q_ = 0.0f;
+  // Can be either "mcts_q_" or a value calculated using an alternative
+  // algorithm (enabled/disabled via "kExperimentalQEnabled" flag)
   float q_ = 0.0f;
   // How many completed visits this node had.
   uint32_t n_ = 0;
@@ -401,7 +413,7 @@ class Node_Iterator {
   Node* operator->() { return node_; }
   bool operator==(Node_Iterator& other) { return node_ == other.node_; }
   bool operator!=(Node_Iterator& other) { return node_ != other.node_; }
-  void operator++() { node_ = node_->sibling_.get(); }
+  Node_Iterator operator++() { return node_ = node_->sibling_.get(); }
 
  private:
   Node* node_;
