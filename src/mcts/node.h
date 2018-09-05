@@ -177,7 +177,12 @@ class Node {
                            uint32_t experimental_q_required_n,
                            float experimental_q_weight
                            );
-
+  // tan(score) is similar to the typical alpha-beta engines scale in which
+  // winning is +inf and losing is -inf.  By averaging tan(score) we weight
+  // extreme losing/winning moves more.  For example if qs = {0.2, 0.3, 0.9}
+  // and n = {50, 20, 10}, the n weighted average q is 0.3125, whereas the n
+  // weighted average tan(q) is 0.5359 .
+  float local_tan(float value);
   // Updates the node Q value using an algorithm based on subtree max Q*N value
   void FinalizeScoreUpdateMinimaxComponent(float v,
                                            uint32_t required_n,
