@@ -313,8 +313,8 @@ void Node::FinalizeScoreUpdateTanComponent(float v) {
 
 
     // Finally update "q_"
-    const float m_pi_2 = 1.5707963267948966f;
-    q_ = atan(w_ave_q) / m_pi_2
+    const float clip_value = 9.0f;
+    q_ = atan(w_ave_q) / atan(clip_value);
   }
 }
 
