@@ -259,13 +259,10 @@ void Node::FinalizeScoreUpdate(float v,
 }
 
 float Node::local_tan(float value) {
-  const float m_pi_2 = 1.5707963267948966f;
   // clip value constrains tan(score) near +/- inf
-  const float clip_value = 100.0f;
-  float return_value = tan(m_pi_2 * value);
-
-  return_value = std::max(-clip_value, return_value);
-  return_value = std::min(clip_value, return_value);
+  const float clip_value = 128.0f;
+  float clip_factor = atan(clip_value);
+  float return_value = tan(clip_factor * value);
 
   return return_value;
 }
