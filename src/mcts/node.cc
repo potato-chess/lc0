@@ -238,10 +238,11 @@ void Node::FinalizeScoreUpdate(float v,
                                bool experimental_q_enabled,
                                uint32_t experimental_q_required_n,
                                float experimental_q_weight) {
+  
   // Recompute Q.
   mcts_q_ += (v - mcts_q_) / (n_ + 1);
   if (experimental_q_enabled) {
-    FinalizeScoreUpdateMinimaxComponent(v,
+    FinalizeScoreUpdateTanComponent(v,
                                         experimental_q_required_n,
                                         experimental_q_weight);
   } else {
@@ -260,16 +261,14 @@ void Node::FinalizeScoreUpdate(float v,
 
 float Node::local_tan(float value) {
   // clip value constrains tan(score) near +/- inf
-  const float clip_value = 128.0f;
+  const float clip_value = 9.0f;
   float clip_factor = atan(clip_value);
   float return_value = tan(clip_factor * value);
 
   return return_value;
 }
 
-void Node::FinalizeScoreUpdateMinimaxComponent(float v,
-                                               uint32_t required_n,
-                                               float max_weight) {
+void Node::FinalizeScoreUpdateTanComponent(float v) {
   // Recompute MinMax Q.
   if (n_ == 0 || is_terminal_) {
     q_ = v;
@@ -282,18 +281,13 @@ void Node::FinalizeScoreUpdateMinimaxComponent(float v,
 
     // Backup all the Q and N values of the childs nodes that have better or
     // equal Q value than the node with the highest N
-    constexpr uint32_t max_array_size = 16;
+    constexpr uint32_t max_array_size = 256;
     std::array<float, max_array_size> qs;
     std::array<uint32_t, max_array_size> ns;
     uint32_t count = 0;
     for (auto child : child_nodes) {
-      if (child == *highest_n_child || child->q_ >= highest_n_child->q_) {
         qs[count] = child->q_;
         ns[count] = child->n_;
-        ++count;
-        if (count == max_array_size) {
-          break;
-        }
       }
     }
 
@@ -317,13 +311,10 @@ void Node::FinalizeScoreUpdateMinimaxComponent(float v,
     }
     w_ave_q /= best_nodes_n_sum;
 
-    // Calculate the "minmax_w"
-    float minmax_w = (float)std::min(n_, required_n) / (float)required_n;
-    minmax_w *= max_weight;
 
     // Finally update "q_"
     const float m_pi_2 = 1.5707963267948966f;
-    q_ = minmax_w * atan(w_ave_q) / m_pi_2 + mcts_q_ * (1.0f - minmax_w);
+    q_ = atan(w_ave_q) / m_pi_2
   }
 }
 

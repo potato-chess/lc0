@@ -184,9 +184,7 @@ class Node {
   // weighted average tan(q) is 0.5359 .
   float local_tan(float value);
   // Updates the node Q value using an algorithm based on subtree max Q*N value
-  void FinalizeScoreUpdateMinimaxComponent(float v,
-                                           uint32_t required_n,
-                                           float max_weight);
+  void FinalizeScoreUpdateTanComponent(float v);
 
   // Updates max depth, if new depth is larger.
   void UpdateMaxDepth(int depth);
