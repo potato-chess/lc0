@@ -286,9 +286,9 @@ void Node::FinalizeScoreUpdateTanComponent(float v) {
     std::array<uint32_t, max_array_size> ns;
     uint32_t count = 0;
     for (auto child : child_nodes) {
-        qs[count] = child->q_;
-        ns[count] = child->n_;
-      }
+      qs[count] = child->q_;
+      ns[count] = child->n_;
+      count++;
     }
 
     // Get the sum N of all child nodes
