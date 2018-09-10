@@ -242,9 +242,7 @@ void Node::FinalizeScoreUpdate(float v,
   // Recompute Q.
   mcts_q_ += (v - mcts_q_) / (n_ + 1);
   if (experimental_q_enabled) {
-    FinalizeScoreUpdateTanComponent(v,
-                                        experimental_q_required_n,
-                                        experimental_q_weight);
+    FinalizeScoreUpdateTanComponent(v);
   } else {
     // If no alternative algorithm is used, "q_" is just "mcts_q_"
     q_ = mcts_q_;
